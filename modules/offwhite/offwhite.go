@@ -23,13 +23,27 @@ var (
 	b      bag
 )
 
-// Item is the product from the site
+// Item - desired item details
 type Item struct {
 	Name, Color, Size, URL string
 }
 
+// Product - matched product from the site
+type Product struct {
+	ID, Scale, Size string
+}
+
 type bag struct {
 	ID string `json:"bagId"`
+}
+
+type atcpayload struct {
+	MerchantID       int    `json:"merchantId"`
+	ProductID        string `json:"productId"`
+	Quantity         int    `json:"quantity"`
+	Scale            int    `json:"scale"`
+	Size             int    `json:"size"`
+	CustomAttributes string `json:"customAttributes"`
 }
 
 type searchResult struct {
@@ -56,37 +70,21 @@ type productDetail struct {
 				Name string `json:"name"`
 			} `json:"color"`
 		} `json:"colors"`
-		// 	Variants         []struct {
-		// 		Attributes []struct {
-		// 			Type        int    `json:"type"`
-		// 			Value       string `json:"value"`
-		// 			Description string `json:"description"`
-		// 		} `json:"attributes"`
-		// 		AvailableAt []int `json:"availableAt"`
-		// 		MerchantID  int   `json:"merchantId"`
-		// } `json:"result"`
-		Sizes []struct {
-			SizeID            string `json:"sizeId"`
-			SizeDescription   string `json:"sizeDescription"`
-			Scale             string `json:"scale"`
-			ScaleAbbreviation string `json:"scaleAbbreviation"`
-			IsOneSize         bool   `json:"isOneSize"`
-			// Variants          []struct {
-			// 	MerchantID                    int      `json:"merchantId"`
-			// 	FormattedPrice                string   `json:"formattedPrice"`
-			// 	FormattedPriceWithoutDiscount string   `json:"formattedPriceWithoutDiscount"`
-			// 	Quantity                      int      `json:"quantity"`
-			// 	Barcodes                      []string `json:"barcodes"`
-			// } `json:"variants"`
-		} `json:"sizes"`
-	}
+	} `json:"result"`
+	Sizes []struct {
+		SizeID            string `json:"sizeId"`
+		SizeDescription   string `json:"sizeDescription"`
+		Scale             string `json:"scale"`
+		ScaleAbbreviation string `json:"scaleAbbreviation"`
+		IsOneSize         bool   `json:"isOneSize"`
+	} `json:"sizes"`
 }
 
 func init() {
 	client = utils.CreateClient()
 	client.Header = &http.Header{}
 	client.Header.Set("User-Agent", userAgent)
-	client.Header.Set("Authority", "www.off---white.com")
+	client.Header.Set("Content-Type", "application/json")
 	client.Header.Set("Accept", "application/json, text/plain, */*'")
 	client.Header.Set("Referer", "https://www.off---white.com/")
 
@@ -108,8 +106,27 @@ func init() {
 
 }
 
+func getDetail(pid string) productDetail {
+	var url bytes.Buffer
+	url.WriteString(baseURL)
+	url.WriteString("/api/products/")
+	url.WriteString(pid)
+	response := client.Perform(http.MethodGet, url.String(), nil)
+	content, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer response.Body.Close()
+	var detail productDetail
+	err = json.Unmarshal([]byte(content), &detail)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return detail
+}
+
 // Search - looking for the product
-func (i Item) Search() {
+func (i Item) Search() Product {
 	var url bytes.Buffer
 	url.WriteString(baseURL)
 	url.WriteString("/api/listing?query=")
@@ -128,38 +145,87 @@ func (i Item) Search() {
 	}
 
 	fmt.Println("looking for exact match.")
+
+	var matched Product
+
 	for _, entry := range result.Products.Entries {
 		if entry.ShortDescription == i.Name {
-
-			var url bytes.Buffer
-			url.WriteString(baseURL)
-			url.WriteString("/api/products/")
-			url.WriteString(strconv.Itoa(entry.ID))
-			response := client.Perform(http.MethodGet, url.String(), nil)
-			content, err := ioutil.ReadAll(response.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer response.Body.Close()
-			var detail productDetail
-			err = json.Unmarshal([]byte(content), &detail)
-			if err != nil {
-				log.Fatal(err)
-			}
+			detail := getDetail(strconv.Itoa(entry.ID))
 			for _, c := range detail.Result.Colors {
 				if c.Color.Name == i.Color {
-					fmt.Println("match found")
-					fmt.Println(entry)
+					fmt.Println("color matched")
+					matched.ID = strconv.Itoa(entry.ID)
 					break
 				}
 			}
+
+			for _, s := range detail.Sizes {
+				if s.SizeDescription == i.Size {
+					fmt.Println("size matched")
+					matched.Size = s.SizeID
+					matched.Scale = s.Scale
+					break
+				}
+			}
+
 			break
 		}
 	}
-
+	return matched
 }
 
 // Fetch - fetching product data
-func (i Item) Fetch() {
+func (i Item) Fetch() Product {
+	sl := strings.Split(i.URL, "-")
+	pid := sl[len(sl)-1]
+	fetched := getDetail(pid)
 
+	var matched Product
+	matched.ID = pid
+	for _, s := range fetched.Sizes {
+		if s.SizeDescription == i.Size {
+			fmt.Println("size matched")
+			matched.Size = s.SizeID
+			matched.Scale = s.Scale
+			break
+		}
+	}
+	return matched
+}
+
+// ATC - Add to cart
+func (p Product) ATC() {
+	var url bytes.Buffer
+	url.WriteString(baseURL)
+	url.WriteString("api/bags/")
+	url.WriteString(b.ID)
+	url.WriteString("/items")
+	scale, err := strconv.Atoi(p.Scale)
+	if err != nil {
+		panic(err)
+	}
+	sizeid, err := strconv.Atoi(p.Size)
+	if err != nil {
+		panic(err)
+	}
+
+	payload := atcpayload{
+		MerchantID:       12572,
+		ProductID:        p.ID,
+		Quantity:         1,
+		Scale:            scale,
+		Size:             sizeid,
+		CustomAttributes: "",
+	}
+	jsonvalue, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	r := client.Perform(http.MethodPost, url.String(), bytes.NewBuffer(jsonvalue))
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bodyString := string(bodyBytes)
+	fmt.Println(bodyString)
 }

@@ -1,9 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/cookiejar"
-	"strings"
 )
 
 // Client - http client definition
@@ -24,7 +24,7 @@ func CreateClient() *Client {
 }
 
 // Perform - executes the request
-func (client *Client) Perform(method, url string, data *strings.Reader) *http.Response {
+func (client *Client) Perform(method, url string, data *bytes.Buffer) *http.Response {
 	var request *http.Request
 	var err error
 	if data == nil {

@@ -18,24 +18,31 @@ import (
 )
 
 func main() {
+	var product offwhite.Product
+
 	item := offwhite.Item{
 		Name:  "SPRAY STRIPES SLIDERS",
 		Color: "BLACK WHITE",
 		Size:  "44",
 		URL:   "",
 	}
+
 	if item.URL == "" {
 		fmt.Println("no URL provided, searching on the site.")
-		item.Search()
+		product = item.Search()
 	} else {
-		item.Fetch()
+		product = item.Fetch()
 	}
+
+	product.ATC()
 }
+
 ```
 
 ### TODO:
-- [ ] ATC
+- [x] ATC
 - [ ] LOGIN (not sure)
 - [ ] CHECKOUT
 - [ ] Write docs
 - [ ] Write tests (ouch)
+- [ ] Refactor
