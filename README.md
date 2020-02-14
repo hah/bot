@@ -40,7 +40,7 @@ func main() {
 ```
 
 ### TODO:
-- [x] ATC
+- [x] ~~ATC~~
 - [ ] LOGIN (not sure)
 - [ ] CHECKOUT
 - [ ] Write docs
