@@ -49,4 +49,4 @@ func main() {
 - [ ] Refactor
 
 ## 🤝 Contributors:
-- [Hasan](https://www.github/except)
+- [Hasan](https://www.github.com/except)
