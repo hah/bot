@@ -1,7 +1,9 @@
-# gyulabot
+# ✨ gyulabot
 https://off---white.com/
 
 (work in progress)
+
+Note: Since I'm washed, expect breaking changes.
 
 ## 📦 Install:
 `go get -u github.com/hah/bot`
