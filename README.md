@@ -6,7 +6,7 @@ https://off---white.com/
 ## 📦 Install:
 `go get -u github.com/hah/bot`
 
-## ⌨️ Example:
+## ⌨️ Usage:
 
 ```go
 package main
@@ -47,3 +47,6 @@ func main() {
 - [ ] Write docs
 - [ ] Write tests (ouch)
 - [ ] Refactor
+
+## 🤝 Contributors:
+- [Hasan](https://www.github/except)

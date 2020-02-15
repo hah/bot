@@ -80,6 +80,20 @@ type productDetail struct {
 	} `json:"sizes"`
 }
 
+// for later
+// login
+// type ErrResponse struct {
+//     Success      bool        `json:"success"`
+//     ErrorCode    json.Number `json:"errorCode"`
+//     ErrorMessage string      `json:"errorMessage"`
+// }
+
+// type TaskAccount struct {
+//     Username   string `json:"username"`
+//     Password   string `json:"password"`
+//     RememberMe bool   `json:"rememberMe"`
+// }
+
 func init() {
 	client = utils.CreateClient()
 	client.Header = &http.Header{}
