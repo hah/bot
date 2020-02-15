@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Client - http client definition
@@ -39,14 +42,14 @@ func (client *Client) Perform(method, url string, data *bytes.Buffer) *http.Resp
 		request, err = http.NewRequest(method, url, data)
 	}
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 	// request.Header = client.Headers
 	// request.Header = *client.Headers.Clone()
 	request.Header = CloneHeader(*client.Header)
 	response, err := client.httpclient.Do(request)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 	return response
 }
@@ -91,5 +94,12 @@ func createTLSConfig() *tls.Config {
 		KeyLogWriter:             nil,
 		InsecureSkipVerify:       false,
 		PreferServerCipherSuites: true,
+	}
+}
+
+// CheckContentType - checks for the response content type
+func CheckContentType(responseHeader http.Header) {
+	if !strings.HasPrefix(responseHeader.Get("Content-Type"), "application/json") {
+		log.Warn().Msg("The response is not a JSON")
 	}
 }

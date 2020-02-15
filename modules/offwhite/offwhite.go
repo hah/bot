@@ -3,14 +3,16 @@ package offwhite
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hah/bot/utils"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -95,6 +97,8 @@ type productDetail struct {
 // }
 
 func init() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.StampMilli})
 	client = utils.CreateClient()
 	client.Header = &http.Header{}
 	client.Header.Set("User-Agent", userAgent)
@@ -109,13 +113,13 @@ func init() {
 	response := client.Perform(http.MethodGet, url.String(), nil)
 	content, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 	defer response.Body.Close()
 
 	err = json.Unmarshal([]byte(content), &b)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
 
 }
@@ -128,21 +132,22 @@ func getDetail(pid string) productDetail {
 	response := client.Perform(http.MethodGet, url.String(), nil)
 	content, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
+	utils.CheckContentType(response.Header)
 	defer response.Body.Close()
 	var detail productDetail
-	// if strings.HasPrefix(response.Header.Get("Content-Type"), "application/json") {
 	err = json.Unmarshal([]byte(content), &detail)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
-	// }
+
 	return detail
 }
 
 // Search - looking for the product
 func (i Item) Search() Product {
+	log.Info().Msg("No URL provided trying to find a match")
 	var url bytes.Buffer
 	url.WriteString(baseURL)
 	url.WriteString("/api/listing?query=")
@@ -151,17 +156,16 @@ func (i Item) Search() Product {
 	response := client.Perform(http.MethodGet, url.String(), nil)
 	content, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
+	utils.CheckContentType(response.Header)
 	defer response.Body.Close()
 	var result searchResult
 	err = json.Unmarshal([]byte(content), &result)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
-
-	fmt.Println("looking for exact match.")
-
+	log.Info().Msg("Looking for an exact match")
 	var matched Product
 
 	for _, entry := range result.Products.Entries {
@@ -169,7 +173,7 @@ func (i Item) Search() Product {
 			detail := getDetail(strconv.Itoa(entry.ID))
 			for _, c := range detail.Result.Colors {
 				if c.Color.Name == i.Color {
-					fmt.Println("color matched")
+					log.Info().Msg("Color matched")
 					matched.ID = strconv.Itoa(entry.ID)
 					break
 				}
@@ -177,7 +181,7 @@ func (i Item) Search() Product {
 
 			for _, s := range detail.Sizes {
 				if s.SizeDescription == i.Size {
-					fmt.Println("size matched")
+					log.Info().Msg("Size matched")
 					matched.Size = s.SizeID
 					matched.Scale = s.Scale
 					break
@@ -192,6 +196,7 @@ func (i Item) Search() Product {
 
 // Fetch - fetching product data
 func (i Item) Fetch() Product {
+	log.Info().Msg("Fetching product details")
 	sl := strings.Split(i.URL, "-")
 	pid := sl[len(sl)-1]
 	fetched := getDetail(pid)
@@ -200,7 +205,7 @@ func (i Item) Fetch() Product {
 	matched.ID = pid
 	for _, s := range fetched.Sizes {
 		if s.SizeDescription == i.Size {
-			fmt.Println("size matched")
+			log.Info().Msg("Size matched")
 			matched.Size = s.SizeID
 			matched.Scale = s.Scale
 			break
@@ -218,11 +223,12 @@ func (p Product) ATC() {
 	url.WriteString("/items")
 	scale, err := strconv.Atoi(p.Scale)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
+
 	}
 	sizeid, err := strconv.Atoi(p.Size)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 
 	payload := atcpayload{
@@ -235,13 +241,15 @@ func (p Product) ATC() {
 	}
 	jsonvalue, err := json.Marshal(payload)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
-	r := client.Perform(http.MethodPost, url.String(), bytes.NewBuffer(jsonvalue))
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	response := client.Perform(http.MethodPost, url.String(), bytes.NewBuffer(jsonvalue))
+	// bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err)
 	}
-	bodyString := string(bodyBytes)
-	fmt.Println(bodyString)
+	utils.CheckContentType(response.Header)
+	defer response.Body.Close()
+	// bodyString := string(bodyBytes)
+	// fmt.Println(bodyString)
 }
