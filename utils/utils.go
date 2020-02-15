@@ -2,8 +2,13 @@ package utils
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/tls"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
+	"time"
 )
 
 // Client - http client definition
@@ -18,7 +23,8 @@ func CreateClient() *Client {
 	client := Client{}
 	client.jar, _ = cookiejar.New(nil)
 	client.httpclient = &http.Client{
-		Jar: client.jar,
+		Jar:       client.jar,
+		Transport: createTransport(nil),
 	}
 	return &client
 }
@@ -54,4 +60,36 @@ func CloneHeader(in http.Header) http.Header {
 		out[key] = newValues
 	}
 	return out
+}
+
+// cfbm
+func createTransport(proxy *url.URL) *http.Transport {
+	transport := &http.Transport{
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          10,
+		IdleConnTimeout:       60 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       createTLSConfig(),
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+	}
+
+	if proxy != nil {
+		transport.Proxy = http.ProxyURL(proxy)
+	}
+
+	return transport
+}
+
+func createTLSConfig() *tls.Config {
+	return &tls.Config{
+		Rand:                     rand.Reader,
+		KeyLogWriter:             nil,
+		InsecureSkipVerify:       false,
+		PreferServerCipherSuites: true,
+	}
 }

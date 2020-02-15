@@ -3,10 +3,10 @@ https://off---white.com/
 
 (work in progress)
 
-### Instalation:
+### 📦 Install:
 `go get -u github.com/hah/bot`
 
-### Example:
+### ⌨️ Example:
 
 ```go
 package main
@@ -39,8 +39,9 @@ func main() {
 
 ```
 
-### TODO:
+### 🔨 Todo:
 - [x] ~~ATC~~
+- [ ] CLOUDFLARE
 - [ ] LOGIN (not sure)
 - [ ] CHECKOUT
 - [ ] Write docs

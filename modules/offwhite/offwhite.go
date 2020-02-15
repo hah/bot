@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	baseURL   = "https://www.off---white.com/en-it/"
+	baseURL   = "https://www.off---white.com/en-it"
 	userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.87 Safari/537.36'"
 )
 
@@ -118,10 +118,12 @@ func getDetail(pid string) productDetail {
 	}
 	defer response.Body.Close()
 	var detail productDetail
+	// if strings.HasPrefix(response.Header.Get("Content-Type"), "application/json") {
 	err = json.Unmarshal([]byte(content), &detail)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// }
 	return detail
 }
 
@@ -197,7 +199,7 @@ func (i Item) Fetch() Product {
 func (p Product) ATC() {
 	var url bytes.Buffer
 	url.WriteString(baseURL)
-	url.WriteString("api/bags/")
+	url.WriteString("/api/bags/")
 	url.WriteString(b.ID)
 	url.WriteString("/items")
 	scale, err := strconv.Atoi(p.Scale)
